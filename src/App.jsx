@@ -1,6 +1,13 @@
 /* eslint-disable */
 import { useState, useMemo, useRef } from "react";
 
+try {
+  const fontLink = document.createElement("link");
+  fontLink.rel = "stylesheet";
+  fontLink.href = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css";
+  document.head.appendChild(fontLink);
+} catch (e) {}
+
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
@@ -77,14 +84,31 @@ export default function App() {
   };
 
   const togglePicking = (zone) => {
-    saveData({ ...data, [zone]: { ...data[zone], picking: !data[zone].picking } });
+    const isPicking = data[zone].picking;
+    const newPicking = !isPicking;
+    saveData({
+      ...data,
+      [zone]: {
+        ...data[zone],
+        picking: newPicking,
+        // 피킹완료 시 전체 배치 자동 채움, 해제 시 그대로
+        done: newPicking ? totalBatches : data[zone].done,
+      }
+    });
   };
 
+  const [resetConfirm, setResetConfirm] = useState(false);
+
   const resetAll = () => {
-    if (!window.confirm("전체 초기화할까요?")) return;
+    if (!resetConfirm) {
+      setResetConfirm(true);
+      setTimeout(() => setResetConfirm(false), 3000);
+      return;
+    }
     const d = {};
     ZONES.forEach(z => { d[z] = { done: "", picking: false }; });
     saveData(d);
+    setResetConfirm(false);
   };
 
   const parseKakaoChat = () => {
@@ -431,7 +455,9 @@ export default function App() {
       </div>
 
       {/* 초기화 버튼 - 맨 아래 */}
-      <button onClick={resetAll} style={{ width: "100%", background: S.card, border: `1px solid #fecaca`, borderRadius: 12, padding: "12px 0", cursor: "pointer", color: "#dc2626", fontSize: 13, fontWeight: 600, marginTop: 16, boxShadow: S.shadow, fontFamily: "inherit", letterSpacing: "0.05em" }}>🔄 전체 초기화</button>
+      <button onClick={resetAll} style={{ width: "100%", background: resetConfirm ? "#fee2e2" : S.card, border: `1px solid ${resetConfirm ? "#dc2626" : "#fecaca"}`, borderRadius: 12, padding: "12px 0", cursor: "pointer", color: "#dc2626", fontSize: 13, fontWeight: 700, marginTop: 16, boxShadow: S.shadow, fontFamily: "inherit" }}>
+        {resetConfirm ? "한 번 더 탭하면 초기화됩니다" : "🔄 전체 초기화"}
+      </button>
     </div>
   );
 }
