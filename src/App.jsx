@@ -254,7 +254,7 @@ export default function App() {
   // 대시보드용 요약 실시간 전송
   useEffect(() => {
     dbSet("summary/flash", { pct: grand.pct, ts: Date.now() });
-  }, [grand.pct]);
+  }, [grand.pct, data]);
 
   const currentDone = data[activeZone].done;
   const currentPct = currentDone !== "" && totalBatches > 0
