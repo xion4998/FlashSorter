@@ -15,7 +15,17 @@ const firebaseConfig = {
 
 let fdb = null;
 try { fdb = getDatabase(initializeApp(firebaseConfig)); } catch (e) {}
-const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {} };
+const dbSet = (p, val) => { 
+  try { 
+    if (fdb) {
+      set(ref(fdb, p), val)
+        .then(() => console.log("Firebase write OK:", p))
+        .catch(e => console.error("Firebase write FAIL:", p, e));
+    } else {
+      console.error("fdb is null!");
+    }
+  } catch (e) { console.error("dbSet error:", e); } 
+};
 
 const EDIT_PASSWORD = "007"; // 수정 비밀번호
 
@@ -101,7 +111,12 @@ export default function App() {
   const doneInputRef = useRef(null);
   const inputPanelRef = useRef(null);
 
-  const saveData = (newData) => { if (!editable) return;
+  const editableRef = useRef(editable);
+  useEffect(() => { editableRef.current = editable; }, [editable]);
+
+  const saveData = (newData) => {
+    const isEditable = editable || (typeof localStorage !== "undefined" && localStorage.getItem("flash_editable") === "true");
+    if (!isEditable) return;
     setData(newData);
     try { localStorage.setItem("flash_data", JSON.stringify(newData)); } catch (e) {} dbSet("flash/data", newData);
   };
@@ -252,6 +267,13 @@ export default function App() {
   }, [zoneTotals, totalBatches]);
 
   // 대시보드용 요약 실시간 전송
+  // data 변경 시 Firebase 자동 동기화
+  useEffect(() => {
+    ZONES.forEach(z => {
+      if (data[z]) dbSet(`flash/data/${z}`, data[z]);
+    });
+  }, [data]);
+
   useEffect(() => {
     dbSet("summary/flash", { pct: grand.pct, ts: Date.now() });
   }, [grand.pct, data]);
