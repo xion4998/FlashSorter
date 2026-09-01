@@ -129,7 +129,7 @@ export default function App() {
 
   const selectBatch = (b) => {
     setActiveBatch(b);
-    saveData({ ...data, [activeZone]: { ...data[activeZone], done: b } });
+    saveData({ ...data, [activeZone]: { ...(data[activeZone]||{}), done: b } });
     setTimeout(() => inputPanelRef.current && inputPanelRef.current.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
@@ -140,7 +140,7 @@ export default function App() {
 
   const handleDoneChange = (zone, val) => {
     const num = val === "" ? "" : Math.min(totalBatches, Math.max(0, parseInt(val) || 0));
-    saveData({ ...data, [zone]: { ...data[zone], done: num } });
+    saveData({ ...data, [zone]: { ...(data[zone]||{}), done: num } });
   };
 
   const togglePicking = (zone) => {
@@ -234,7 +234,8 @@ export default function App() {
   const zoneTotals = useMemo(() => {
     const out = {};
     ZONES.forEach(z => {
-      const done = (data[z]||{done:"",picking:false}).done === "" ? 0 : Number((data[z]||{done:"",picking:false}).done);
+      const rawDone = ((data[z]||{done:"",picking:false})||{}).done;
+      const done = (rawDone === "" || rawDone === undefined || rawDone === null) ? 0 : (Number(rawDone)||0);
       const pct = totalBatches > 0 ? Math.round((done / totalBatches) * 100) : 0;
       out[z] = { done, pct };
     });
