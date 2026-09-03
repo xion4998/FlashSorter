@@ -140,7 +140,7 @@ export default function App() {
 
   const handleDoneChange = (zone, val) => {
     const num = val === "" ? "" : Math.min(totalBatches, Math.max(0, parseInt(val) || 0));
-    saveData({ ...data, [zone]: { ...(data[zone]||{}), done: num } });
+    saveData({ ...data, [zone]: { ...(data[zone]||{}), done: num } }, zone);
   };
 
   const togglePicking = (zone) => {
@@ -243,20 +243,26 @@ export default function App() {
   }, [data, totalBatches]);
 
 
+  const isWritingRef = useRef(false);
+
   // Firebase 실시간 구독
   useEffect(() => {
     if (!fdb) return;
     const subs = [];
-    subs.push(onValue(ref(fdb, "flash/data"), snap => {
-      const v = snap.val();
-      if (v) {
-        // Firebase 키 P_Z → P/Z 변환
-        const converted = {};
-        Object.keys(v).forEach(k => { converted[k.replace(/_/g, "/")] = v[k]; });
-        setData(converted);
-        try { localStorage.setItem("flash_data", JSON.stringify(v)); } catch (e) {}
-      }
-    }));
+    ZONES.forEach(z => {
+      const fbKey = z.replace(/\//g, "_");
+      subs.push(onValue(ref(fdb, `flash/data/${fbKey}`), snap => {
+        const v = snap.val();
+        if (v) {
+          isWritingRef.current = true;
+          setData(prev => {
+            const next = { ...prev, [z]: v };
+            try { localStorage.setItem("flash_data", JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        }
+      }));
+    });
     subs.push(onValue(ref(fdb, "flash/total"), snap => {
       const v = snap.val();
       if (v) { setTotalBatches(v); setTempTotal(String(v)); }
@@ -271,13 +277,7 @@ export default function App() {
   }, [zoneTotals, totalBatches]);
 
   // 대시보드용 요약 실시간 전송
-    // data 변경 시 Firebase 자동 동기화
-  useEffect(() => {
-    ZONES.forEach(z => {
-      const fbKey = z.replace(/\//g, "_");
-      if (data[z]) dbSet(`flash/data/${fbKey}`, data[z]);
-    });
-  }, [data]);
+  
 
   useEffect(() => {
     dbSet("summary/flash", { pct: grand.pct, ts: Date.now() });
